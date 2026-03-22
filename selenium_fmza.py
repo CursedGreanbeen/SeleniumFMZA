@@ -1,5 +1,6 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -7,6 +8,20 @@ from selenium.webdriver.support import expected_conditions as EC
 import hashlib
 import csv
 import time
+
+
+def find_next_btn():
+    for attempt in range(3):
+        try:
+            container = driver.find_element(By.CSS_SELECTOR, "span#next")
+            parent_div = container.find_element(By.XPATH, "./ancestor::div[contains(@class,'button100')]")
+            if "xforms-disabled" in parent_div.get_attribute("class"):
+                return None
+            return container.find_element(By.CSS_SELECTOR, "span.value a, span.value button")
+        except StaleElementReferenceException:
+            print(f"Stale при поиске next_btn, попытка {attempt+1}/3")
+            time.sleep(0.5)
+    raise Exception("Не удалось найти next_btn после 3 попыток")
 
 
 driver = webdriver.Chrome()
@@ -17,7 +32,7 @@ driver.get(base_url)
 try:
     # Ожидание появления формы входа
     username_field = wait.until(EC.presence_of_element_located((By.ID, "username")))
-    username_field.send_keys("login")
+    username_field.send_keys("username")
 
     password_field = driver.find_element(By.ID, "password")
     password_field.send_keys("password")
@@ -77,12 +92,7 @@ with open(output_file, "a", encoding="utf-8-sig", newline="") as f:
     wait.until(EC.invisibility_of_element_located((By.XPATH, spec_xpath)))
     time.sleep(1)
 
-    # 3. Перейти к тесту
-    go_link_xpath = "//i[contains(@class, 'fa-arrow-circle-right')]"
-    go_link = wait.until(EC.element_to_be_clickable((By.XPATH, go_link_xpath)))
-    go_link.click()
-
-    # Переключаемся на новую вкладку, где загрузится тест
+    # 3. Переключаемся на новую вкладку, где загрузится тест
     driver.switch_to.window(driver.window_handles[-1])
     time.sleep(7)
 
@@ -92,6 +102,9 @@ with open(output_file, "a", encoding="utf-8-sig", newline="") as f:
     ))
     start_question.click()
     print("Кнопка нажата, ждём question_list...")
+    time.sleep(5)
+    print(f"URL после нажатия: {driver.current_url}")
+    print(f"Заголовок страницы: {driver.title}")
     WebDriverWait(driver, 30).until(
         EC.presence_of_element_located((By.ID, "question_list"))
     )
@@ -163,12 +176,10 @@ with open(output_file, "a", encoding="utf-8-sig", newline="") as f:
             f.flush()
             collected.add(q_hash)
 
-        next_btn_container = driver.find_element(By.CSS_SELECTOR, "span#next")
-        parent_div = next_btn_container.find_element(By.XPATH, "./ancestor::div[contains(@class,'button100')]")
-        if "xforms-disabled" in parent_div.get_attribute("class"):
+        next_btn = find_next_btn()
+        if next_btn is None:
             print("Достигли последнего вопроса, выходим")
             break
 
-        next_btn = next_btn_container.find_element(By.CSS_SELECTOR, "span.value a, span.value button")
-        next_btn.click()
+        driver.execute_script("arguments[0].click();", next_btn)
         time.sleep(0.5)
