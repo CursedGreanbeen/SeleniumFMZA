@@ -13,11 +13,15 @@ import time
 def find_next_btn():
     for attempt in range(3):
         try:
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "span#next"))
+            )
             container = driver.find_element(By.CSS_SELECTOR, "span#next")
             parent_div = container.find_element(By.XPATH, "./ancestor::div[contains(@class,'button100')]")
-            if "xforms-disabled" in parent_div.get_attribute("class"):
+            if "disabled" in parent_div.get_attribute("class").split():
                 return None
-            return container.find_element(By.CSS_SELECTOR, "span.value a, span.value button")
+            btn = container.find_element(By.CSS_SELECTOR, "span.value button")
+            return btn
         except StaleElementReferenceException:
             print(f"Stale при поиске next_btn, попытка {attempt+1}/3")
             time.sleep(0.5)
