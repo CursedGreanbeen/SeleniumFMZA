@@ -114,7 +114,7 @@ python selenium_fmza.py
 **Прохождение теста прервалось, не дойдя до завершения**
 → Какая-то ошибка на сервере. Запустите скрипт `selenium_fmza_finished_tests.py`:
 ```
-python selenium_fmza.py
+python selenium_fmza_finished_tests.py
 ```
 Он добавит все недособранные вопросы в итоговый файл
 В командной строке будет виден прогресс, например:
